@@ -1,0 +1,167 @@
+---
+title: "Multiclass classificaiton: marketing data"
+output: html_notebook
+---
+
+
+# 9 Multiclass classificaiton: marketing data
+```{r}
+library(gbm)
+```
+
+
+```{r}
+occup = read.csv("./data/occup.csv")
+```
+
+```{r}
+# label the col names
+# Refer to occup.txt for the varaibles description
+
+occuplabs<-c("occup", "TypeHome",
+             "sex","MarStat", "age", "Edu","Income",
+             "LiveBA","DualInc","Persons", "Under18", "HouseStat",
+             "Ethnic")
+  # Names for predictors and response
+colnames(occup) =occuplabs
+
+```
+
+```{r}
+# Turn the predictors into qualitative variables.
+occup[] = lapply(occup, factor)
+  col_names = names(occup)
+
+```
+
+
+Split data in 0.8 (80% training and 20% test) one for training the other for test
+
+```{r}
+library(caTools)
+```
+
+```{r}
+split = sample.split(occup$occup, SplitRatio = 0.8)
+occup.train = subset(occup, split == TRUE)
+occup.test = subset(occup, split == FALSE)
+```
+
+Fit the data into a gbm
+```{r}
+gbm = gbm(occup~., data=occup.train,interaction.depth=4,shrinkage=.05, n.trees=5000,bag.fraction=0.5,cv.folds=5, distribution="multinomial",verbose=F)
+```
+
+
+Use Cross validation to determine best iteration
+
+```{r}
+# Use cross validaiton to select the best iteration
+best.iter=gbm.perf(gbm,method="cv")
+```
+
+
+Refit the model
+
+```{r}
+gbm = gbm(occup~., data=occup.train,interaction.depth=4,shrinkage=.05, n.trees=best.iter,bag.fraction=0.5,cv.folds=5, distribution="multinomial",verbose=F)
+```
+
+
+```{r}
+gbm.predict = data.frame(predict(gbm, type = "response", occup.test,n.trees = best.iter-10))
+colnames(gbm.predict) = c('Professional/Managerial',"SalesWrk","FactoryWrk","ClericalWrk","Homemaker","Student","Military","Retired","Unemployed")
+```
+
+```{r}
+gbm.predict$Cat = apply(gbm.predict, 1, which.max)
+```
+
+```{r}
+gbm.predict = gbm.predict$Cat
+```
+
+
+This is our confusion matrix.
+```{r}
+cm = table(gbm.predict, occup.test$occup)
+cm
+```
+
+(a)
+Misclassfication overall error is
+
+```{r}
+(cm[1,1]+cm[2,2]+cm[3,3]+cm[4,4]+cm[5,5]+cm[6,6]+cm[7,7]+cm[8,8]+cm[9,9])/sum(cm)
+```
+
+
+Misclassifcation error for class 1
+
+```{r}
+1-cm[1,1]/sum(cm[1,])
+```
+
+
+Misclassifcation error for class 2
+```{r}
+1-cm[2,2]/sum(cm[2,])
+```
+
+Misclassifcation error for class 3
+```{r}
+1-cm[3,3]/sum(cm[3,])
+```
+
+
+Misclassifcation error for class 4
+```{r}
+1-cm[4,4]/sum(cm[4,])
+```
+
+
+
+Misclassifcation error for class 5
+
+```{r}
+1-cm[5,5]/sum(cm[5,])
+```
+
+
+Misclassifcation error for class 6
+```{r}
+1-cm[6,6]/sum(cm[6,])
+```
+
+
+Misclassifcation error for class 7
+
+
+```{r}
+1-cm[7,7]/sum(cm[7,])
+```
+
+Misclassifcation error for class 8
+
+```{r}
+1-cm[8,8]/sum(cm[8,])
+```
+
+
+Misclassifcation error for class 9
+
+```{r}
+1-cm[9,9]/sum(cm[9,])
+```
+
+
+(b)
+
+Most important variables:
+
+Age, educaiton and income are the most important variables. 
+
+```{r}
+summary(gbm)
+```
+
